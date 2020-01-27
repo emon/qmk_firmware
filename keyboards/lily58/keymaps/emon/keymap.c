@@ -29,19 +29,128 @@ enum custom_keycodes {
   ADJUST,
 };
 
+enum {
+      SINGLE_TAP = 1,
+      SINGLE_HOLD = 2,
+      DOUBLE_TAP = 3,
+};
+
+typedef struct {
+  bool is_press_action;
+  int state;
+} tap;
+
+int cur_dance (qk_tap_dance_state_t *state) {
+  if (state->count == 1) {
+    if (!state->pressed) return SINGLE_TAP;
+    else return SINGLE_HOLD;
+  }
+  else if (state->count == 2) {
+    return DOUBLE_TAP;
+  }
+  else return 6; //magic number. At some point this method will expand to work for more presses
+}
+
+//instanalize an instance of 'tap' for the 'x' tap dance.
+static tap xtap_state = {
+  .is_press_action = true,
+  .state = 0
+};
 
 enum {
       TD_LSFT_CAPS = 0,
       TD_ENT_LCTRL,
       TD_EQL_RBRC,
+      TD_LANG1_LOWER,
+      TD_LANG2_RAISE,
 };
+
+
+void lang1_lower_finished_1 (qk_tap_dance_state_t *state, void *user_data) {
+  xtap_state.state = cur_dance(state);
+  switch (xtap_state.state) {
+    case SINGLE_TAP:
+        if (IS_LAYER_ON(_LOWER)){
+            layer_off(_LOWER);
+        } else {
+        register_code(KC_LANG1);
+        }
+        break;
+    case SINGLE_HOLD:
+        layer_on(_LOWER);
+        break;
+    case DOUBLE_TAP:
+        layer_invert(_LOWER);
+        break;
+  }
+}
+
+void lang1_lower_reset_1 (qk_tap_dance_state_t *state, void *user_data) {
+  switch (xtap_state.state) {
+    case SINGLE_TAP:
+      unregister_code(KC_LANG1);
+        break;
+    case SINGLE_HOLD:
+        layer_off(_LOWER);
+        break;
+    case DOUBLE_TAP:  break;
+  }
+  xtap_state.state = 0;
+}
+
+void lang2_raise_finished_1 (qk_tap_dance_state_t *state, void *user_data) {
+  xtap_state.state = cur_dance(state);
+  switch (xtap_state.state) {
+    case SINGLE_TAP:
+        if (IS_LAYER_ON(_RAISE)){
+            layer_off(_RAISE);
+        } else {
+        register_code(KC_LANG2);
+        }
+        break;
+    case SINGLE_HOLD:
+        layer_on(_RAISE);
+        break;
+    case DOUBLE_TAP:
+        layer_invert(_RAISE);
+        break;
+  }
+}
+
+void lang2_raise_reset_1 (qk_tap_dance_state_t *state, void *user_data) {
+  switch (xtap_state.state) {
+    case SINGLE_TAP:
+        unregister_code(KC_LANG2);
+        break;
+    case SINGLE_HOLD:
+        layer_off(_RAISE);
+        break;
+    case DOUBLE_TAP:  break;
+  }
+  xtap_state.state = 0;
+}
+
+
 
 qk_tap_dance_action_t tap_dance_actions[] = {
   [TD_LSFT_CAPS] = ACTION_TAP_DANCE_DOUBLE(KC_LSFT, KC_CAPS),
   [TD_ENT_LCTRL] = ACTION_TAP_DANCE_DOUBLE(KC_ENT, KC_LCTRL),
   [TD_EQL_RBRC] = ACTION_TAP_DANCE_DOUBLE(KC_EQL, KC_RBRC),
+  [TD_LANG1_LOWER] = ACTION_TAP_DANCE_FN_ADVANCED(NULL,
+						  lang1_lower_finished_1,
+						  lang1_lower_reset_1),
+  [TD_LANG2_RAISE] = ACTION_TAP_DANCE_FN_ADVANCED(NULL,
+						  lang2_raise_finished_1,
+						  lang2_raise_reset_1),
 };
 
+
+#define TapDLsftCaps	TD(TD_LSFT_CAPS)
+#define TapDEqlRbrc	TD(TD_EQL_RBRC)
+#define TapDLang1Lower	TD(TD_LANG1_LOWER)
+#define TapDLang2Raise	TD(TD_LANG2_RAISE)
+#define TapSpcLctl	MT(MOD_LCTL,KC_SPC)
+#define TapSpcLsft	MT(MOD_LSFT,KC_SPC)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
@@ -87,9 +196,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   KC_ESC,   KC_1,   KC_2,    KC_3,    KC_4,    KC_5,                     KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_GRV, \
   KC_TAB,   KC_Q,   KC_W,    KC_E,    KC_R,    KC_T,                     KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_MINS, \
   KC_LCTRL, KC_A,   KC_S,    KC_D,    KC_F,    KC_G,                     KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, \
-  TD(TD_LSFT_CAPS), \
-         KC_Z,   KC_X,    KC_C,    KC_V,    KC_B, KC_LBRC, TD(TD_EQL_RBRC), KC_N, KC_M,    KC_COMM, KC_DOT,  KC_SLSH,  KC_BSLS, \
-                KC_LALT, KC_LGUI,  KC_SPC, LT(2,KC_LANG2), LT(1,KC_LANG1), KC_SPC, TD(TD_ENT_LCTRL), KC_BSPC \
+  TapDLsftCaps,KC_Z, KC_X,   KC_C,    KC_V,    KC_B, KC_LBRC, TapDEqlRbrc, KC_N,   KC_M,    KC_COMM, KC_DOT,  KC_SLSH,  KC_BSLS, \
+                  KC_LALT,KC_LGUI,TapSpcLctl, TapDLang2Raise, TapDLang1Lower, TapSpcLsft, KC_ENT, KC_BSPC \
 ),
 /* LOWER
  * ,-----------------------------------------.                    ,-----------------------------------------.

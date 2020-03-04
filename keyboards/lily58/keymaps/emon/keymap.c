@@ -151,6 +151,8 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 #define TapDLang2Raise	TD(TD_LANG2_RAISE)
 #define TapSpcLctl	MT(MOD_LCTL,KC_SPC)
 #define TapSpcLsft	MT(MOD_LSFT,KC_SPC)
+#define TapLang2Lgui	MT(MOD_LGUI,KC_LANG2)
+#define TapLang1Rctl	MT(MOD_RCTL,KC_LANG1)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
@@ -199,7 +201,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   TapDLsftCaps,KC_Z, KC_X,   KC_C,    KC_V,    KC_B, KC_LBRC, TapDEqlRbrc, KC_N,   KC_M,    KC_COMM, KC_DOT,  KC_SLSH,  KC_BSLS, \
   /*                  KC_LALT,KC_LGUI,TapSpcLctl, TapDLang2Raise, TapDLang1Lower, TapSpcLsft, KC_ENT, KC_BSPC \*/
   /*                     KC_LALT,KC_LGUI,TapSpcLctl, TapDLang2Raise, TapDLang1Lower, KC_ENT, TapSpcLsft, KC_BSPC \*/
-  RAISE,  KC_LALT, KC_LGUI, KC_SPC, KC_ENT, KC_RCTRL, KC_BSPC,LOWER \
+  RAISE,  KC_LALT, TapLang2Lgui, KC_SPC, KC_ENT, TapLang1Rctl, KC_BSPC,LOWER \
 
 ),
 /* LOWER
@@ -338,69 +340,47 @@ void iota_gfx_task_user(void) {
 #endif//SSD1306OLED
 
 
-static bool lower_pressed = false;
-static uint16_t lower_pressed_time = 0;
-static bool raise_pressed = false;
-static uint16_t raise_pressed_time = 0;
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  if (record->event.pressed) {
+#ifdef SSD1306OLED
+    set_keylog(keycode, record);
+#endif
+    // set_timelog();
+  }
   switch (keycode) {
+    case QWERTY:
+      if (record->event.pressed) {
+	set_single_persistent_default_layer(_QWERTY);
+      }
+      return false;
+      break;
     case LOWER:
       if (record->event.pressed) {
-        lower_pressed = true;
-        lower_pressed_time = record->event.time;
-
-        layer_on(_LOWER);
-        update_tri_layer(_LOWER, _RAISE, _ADJUST);
+	layer_on(_LOWER);
+	update_tri_layer_RGB(_LOWER, _RAISE, _ADJUST);
       } else {
-        layer_off(_LOWER);
-        update_tri_layer(_LOWER, _RAISE, _ADJUST);
-
-        if (lower_pressed && (TIMER_DIFF_16(record->event.time, lower_pressed_time) < TAPPING_TERM)) {
-          register_code(KC_LANG1); // for macOS
-          register_code(KC_HENK);
-          unregister_code(KC_HENK);
-          unregister_code(KC_LANG1);
-        }
-        lower_pressed = false;
+	layer_off(_LOWER);
+	update_tri_layer_RGB(_LOWER, _RAISE, _ADJUST);
       }
       return false;
       break;
     case RAISE:
       if (record->event.pressed) {
-        raise_pressed = true;
-        raise_pressed_time = record->event.time;
-
-        layer_on(_RAISE);
-        update_tri_layer(_LOWER, _RAISE, _ADJUST);
+	layer_on(_RAISE);
+	update_tri_layer_RGB(_LOWER, _RAISE, _ADJUST);
       } else {
-        layer_off(_RAISE);
-        update_tri_layer(_LOWER, _RAISE, _ADJUST);
-
-        if (raise_pressed && (TIMER_DIFF_16(record->event.time, raise_pressed_time) < TAPPING_TERM)) {
-          register_code(KC_LANG2); // for macOS
-          register_code(KC_MHEN);
-          unregister_code(KC_MHEN);
-          unregister_code(KC_LANG2);
-        }
-        raise_pressed = false;
+	layer_off(_RAISE);
+	update_tri_layer_RGB(_LOWER, _RAISE, _ADJUST);
       }
       return false;
       break;
     case ADJUST:
       if (record->event.pressed) {
-        layer_on(_ADJUST);
+	layer_on(_ADJUST);
       } else {
-        layer_off(_ADJUST);
+	layer_off(_ADJUST);
       }
       return false;
-      break;
-    default:
-      if (record->event.pressed) {
-        // reset the flags
-        lower_pressed = false;
-        raise_pressed = false;
-      }
       break;
   }
   return true;
